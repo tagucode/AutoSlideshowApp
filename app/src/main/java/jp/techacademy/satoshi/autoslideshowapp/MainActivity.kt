@@ -151,6 +151,17 @@ class MainActivity : AppCompatActivity(),View.OnClickListener {
                     }
                 }
             }, 2000, 2000) // 最初に始動させるまで 2000ミリ秒、ループの間隔を 2000ミリ秒 に設定
+            playButton.text = "停止"
+            nextButton.isClickable = false
+            backButton.isClickable = false
+        } else {
+            if (mTimer != null){
+                mTimer!!.cancel()
+                mTimer = null
+            }
+            playButton.text = "再生"
+            nextButton.isClickable = true
+            backButton.isClickable = true
         }
     }
 
