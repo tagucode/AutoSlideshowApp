@@ -12,7 +12,10 @@ import android.view.View
 import android.provider.MediaStore
 import android.content.ContentUris
 import android.database.Cursor
+import android.net.Uri
+import android.os.Handler
 import kotlinx.android.synthetic.main.activity_main.*
+import java.util.*
 
 class MainActivity : AppCompatActivity(),View.OnClickListener {
 
@@ -20,8 +23,14 @@ class MainActivity : AppCompatActivity(),View.OnClickListener {
 
     lateinit var resolver:ContentResolver
     var cursor:Cursor? = null
+    var imageUri:Uri? = null
+    var ContentsMax = 0
+    var ContentsPosition = 0
 
-    @SuppressLint("Recycle")
+    private var mTimer: Timer? = null
+    private var mTimerSec = 0.0
+    private var mHandler = Handler()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -72,21 +81,84 @@ class MainActivity : AppCompatActivity(),View.OnClickListener {
     }
 
     private fun getContentsInfo() {
+        cursor!!.moveToFirst()
+        // indexからIDを取得し、そのIDから画像のURIを取得する
+        var fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+        var id = cursor!!.getLong(fieldIndex)
+        imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+
+        imageView.setImageURI(imageUri)
 
         if (cursor!!.moveToFirst()) {
-            // indexからIDを取得し、そのIDから画像のURIを取得する
-            val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
-            val id = cursor!!.getLong(fieldIndex)
-            val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+            do {
+                // indexからIDを取得し、そのIDから画像のURIを取得する
+                val fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+                val id = cursor!!.getLong(fieldIndex)
+                val imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
 
-            imageView.setImageURI(imageUri)
+                ContentsMax++
+            } while (cursor!!.moveToNext())
         }
-        cursor!!.close()
+        cursor!!.moveToFirst()
+        //cursor!!.close()
+    }
+
+    private fun nextContentsInfo() {
+        ContentsPosition++
+
+        if (ContentsPosition == ContentsMax) {
+            cursor!!.moveToFirst()
+            ContentsPosition = 0
+        } else {
+            cursor!!.moveToNext()
+        }
+        // indexからIDを取得し、そのIDから画像のURIを取得する
+        var fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+        var id = cursor!!.getLong(fieldIndex)
+        imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+
+        imageView.setImageURI(imageUri)
+
+        //cursor!!.close()
+    }
+
+    private fun backContentsInfo() {
+        if (ContentsPosition == 0) {
+            cursor!!.moveToLast()
+            ContentsPosition = ContentsMax
+        } else {
+            cursor!!.moveToPrevious()
+        }
+        ContentsPosition--
+        // indexからIDを取得し、そのIDから画像のURIを取得する
+        var fieldIndex = cursor!!.getColumnIndex(MediaStore.Images.Media._ID)
+        var id = cursor!!.getLong(fieldIndex)
+        imageUri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
+
+        imageView.setImageURI(imageUri)
+
+        //cursor!!.close()
+    }
+
+    private fun playContentsInfo() {
+        if (mTimer == null){
+            mTimer = Timer()
+            mTimer!!.schedule(object : TimerTask() {
+                override fun run() {
+                    mTimerSec += 0.1
+                    mHandler.post {
+                        nextContentsInfo()
+                    }
+                }
+            }, 2000, 2000) // 最初に始動させるまで 2000ミリ秒、ループの間隔を 2000ミリ秒 に設定
+        }
     }
 
     override fun onClick(v: View) {
         when(v.id){
-            R.id.playButton -> getContentsInfo()
+            R.id.nextButton -> nextContentsInfo()
+            R.id.playButton -> playContentsInfo()
+            R.id.backButton -> backContentsInfo()
         }
     }
 
